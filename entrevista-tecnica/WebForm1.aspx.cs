@@ -10,6 +10,7 @@ namespace entrevista_tecnica
 {
     public partial class WebForm1 : System.Web.UI.Page
     {
+        public static string currentId = "0";
         protected void Page_Load(object sender, EventArgs e)
         {
             DivData.Visible = false;
@@ -29,7 +30,7 @@ namespace entrevista_tecnica
              if (vm.ValidateSearch(DropDownListTypeDni.SelectedValue, TextBoxDni.Text)) {
                 String documentType = DropDownListTypeDni.SelectedValue.ToString();
                 String document = TextBoxDni.Text;
-                var sentence = "SELECT * FROM Suscriptor WHERE NumeroDocumento like (@document) AND TipoDocumento like (@documentType)";
+                var sentence = "SELECT IdSuscriptor, * FROM Suscriptor WHERE NumeroDocumento like (@document) AND TipoDocumento like (@documentType)";
 
                 var connection = new SqlConnection(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\usuario\source\repos\entrevista-tecnica\entrevista-tecnica\App_Data\Database1.mdf;Integrated Security=True");
                 connection.Open();
@@ -51,7 +52,7 @@ namespace entrevista_tecnica
                     TextBoxEmail.Text = Convert.ToString(reader["Email"]);
                     TextBoxUsername.Text = Convert.ToString(reader["NombreUsuario"]);
                     TextBoxPass.Text = Convert.ToString(reader["Password"]);
-                    currentId = (int)Convert.ToInt64(reader["IdSuscriptor"]);
+                    currentId = Convert.ToString(reader["IdSuscriptor"]);
                     TextBoxEstado.Text = "Registrado";
 
                     Results.Text = "Suscriptor encontrado";
@@ -89,19 +90,24 @@ namespace entrevista_tecnica
 
             SqlDataReader reader = command1.ExecuteReader();
 
-            if (reader.Read())
+            var isRead = reader.Read();
+
+            connection.Close();
+
+            if (isRead)
             {
                 Results.Text = "El suscriptor ya tiene una suscripción vigente.";
             }
             else
             {
-                var sentence2 = "INSERT INTO Suscripcion (IdSuscriptor, FechaAlta, FechaFin, MotivoFin) values (@idSuscriptor, @fechaAlta, @fechaFin, @motivoFin)";
-                var command2 = new SqlCommand(sentence2, connection);
+                var connection2 = new SqlConnection(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=C:\Users\usuario\source\repos\entrevista-tecnica\entrevista-tecnica\App_Data\Database1.mdf;Integrated Security=True");
+                connection2.Open();
+
+                var sentence2 = "INSERT INTO Suscripcion (IdSuscriptor, FechaAlta) values (@idSuscriptor, @fechaAlta)";
+                var command2 = new SqlCommand(sentence2, connection2);
                 command2.Parameters.AddWithValue("IdSuscriptor", currentId);
                 command2.Parameters.AddWithValue("fechaAlta", DateTime.Now);
-                command2.Parameters.AddWithValue("fechaFin", null);
-                command2.Parameters.AddWithValue("motivoFin", null);
-
+                
                 try
                 {
                     command2.ExecuteNonQuery();
@@ -109,10 +115,10 @@ namespace entrevista_tecnica
                 }
                 catch
                 {
-                    Results.Text = "Error. No se ha podido registrar la suscripción.";
+                    Results.Text = "Error. No se ha podido registrar la suscripción.Datos: id:" + currentId.ToString() + " - fecha: " + DateTime.Now.ToString();
                 }
+                connection2.Close();
             }
-            connection.Close();
         }
 
 
@@ -243,7 +249,6 @@ namespace entrevista_tecnica
 
 
         }
-        public int currentId = 0;
     }
 
 
